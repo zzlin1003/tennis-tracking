@@ -12,7 +12,8 @@ import sys
 import time
 
 from sktime.datatypes._panel._convert import from_2d_array_to_nested
-from court_detector import CourtDetector
+# (change2) add 'line_intersection' method
+from court_detector import CourtDetector, line_intersection
 from Models.tracknet import trackNet
 from TrackPlayers.trackplayers import *
 from utils import get_video_properties, get_dtype
@@ -36,9 +37,10 @@ minimap = args.minimap
 bounce = args.bounce
 
 n_classes = 256
-save_weights_path = 'WeightsTracknet/model.1'
+# (change)
+save_weights_path = 'WeightsTracknet/model.h5'
 yolo_classes = 'Yolov3/yolov3.txt'
-yolo_weights = 'Yolov3/yolov3.weights'
+# (change) yolo_weights = 'Yolov3/yolov3.weights'
 yolo_config = 'Yolov3/yolov3.cfg'
 
 if output_video_path == "":
@@ -84,7 +86,7 @@ output_video = cv2.VideoWriter(output_video_path, fourcc, fps, (output_width, ou
 # load yolov3 labels
 LABELS = open(yolo_classes).read().strip().split("\n")
 # yolo net
-net = cv2.dnn.readNet(yolo_weights, yolo_config)
+# net = cv2.dnn.readNet(yolo_weights, yolo_config) # (change) comment out this line
 
 # court
 court_detector = CourtDetector()
@@ -116,7 +118,45 @@ while True:
     
     for i in range(0, len(lines), 4):
       x1, y1, x2, y2 = lines[i],lines[i+1], lines[i+2], lines[i+3]
-      cv2.line(frame, (int(x1),int(y1)),(int(x2),int(y2)), (0,0,255), 5)
+      cv2.line(frame, (int(x1),int(y1)),(int(x2),int(y2)), (0,0,255), 2)
+
+    # --- (change2) draw key court reference points ---
+    def helper(input_line):
+      return ((input_line[0],input_line[1]),(input_line[2],input_line[3]))
+
+    def get_intersection_pt(line1,line2):
+      pt = line_intersection(line1,line2)
+      return tuple(map(int,pt))
+
+    baseline_top = helper(lines[:4])
+    baseline_bottom = helper(lines[4:8])
+    net = helper(lines[8:12])
+    left_court_line = helper(lines[12:16])
+    right_court_line = helper(lines[16:20])
+    left_inner_line = helper(lines[20:24])
+    right_inner_line = helper(lines[24:28])
+    middle_line = helper(lines[28:32])
+    top_inner_line = helper(lines[32:36])
+    bottom_inner_line = helper(lines[36:40])
+
+    top_left_outer_pt = get_intersection_pt(baseline_top,left_court_line)
+    top_left_inner_pt = get_intersection_pt(baseline_top,left_inner_line)
+    top_middle_pt = get_intersection_pt(baseline_top,middle_line)
+    top_right_inner_pt = get_intersection_pt(baseline_top,right_inner_line)
+    top_right_outer_pt = get_intersection_pt(baseline_top,right_court_line)
+    top_serve_left_pt = get_intersection_pt(top_inner_line,left_inner_line)
+    top_serve_middle_pt = get_intersection_pt(top_inner_line,middle_line)
+    top_serve_right_pt = get_intersection_pt(top_inner_line,right_inner_line)
+    
+    bottom_left_outer_pt = get_intersection_pt(baseline_bottom,left_court_line)
+    bottom_left_inner_pt = get_intersection_pt(baseline_bottom,left_inner_line)
+    bottom_middle_pt = get_intersection_pt(baseline_bottom,middle_line)
+    bottom_right_inner_pt = get_intersection_pt(baseline_bottom,right_inner_line)
+    bottom_right_outer_pt = get_intersection_pt(baseline_bottom,left_court_line)
+    bottom_serve_left_pt = get_intersection_pt(bottom_inner_line,left_inner_line)
+    bottom_serve_middle_pt = get_intersection_pt(bottom_inner_line,middle_line)
+    bottom_serve_right_pt = get_intersection_pt(bottom_inner_line,right_inner_line)
+    # --- (change2 end) ---
     new_frame = cv2.resize(frame, (v_width, v_height))
     frames.append(new_frame)
   else:
