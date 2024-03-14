@@ -156,6 +156,27 @@ while True:
     bottom_serve_left_pt = get_intersection_pt(bottom_inner_line,left_inner_line)
     bottom_serve_middle_pt = get_intersection_pt(bottom_inner_line,middle_line)
     bottom_serve_right_pt = get_intersection_pt(bottom_inner_line,right_inner_line)
+
+    ref_pts = {'tlo': top_left_outer_pt,
+               'tli': top_left_inner_pt,
+               'tm': top_middle_pt,
+               'tri': top_right_inner_pt,
+               'tro': top_right_outer_pt,
+               'tsl': top_serve_left_pt,
+               'tsm': top_serve_middle_pt,
+               'tsr': top_serve_right_pt,
+               'blo': bottom_left_outer_pt,
+               'bli': bottom_left_inner_pt,
+               'bm': bottom_middle_pt,
+               'bri': bottom_right_inner_pt,
+               'bro': bottom_right_outer_pt,
+               'bsl': bottom_serve_left_pt,
+               'bsm': bottom_serve_middle_pt,
+               'bsr': bottom_serve_right_pt}
+
+    for key, val in ref_pts.items():
+      cv2.circle(frame,val,2,(0,255,0),5)
+      cv2.putText(frame,f"{key}",val,cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,0,0),2,cv2.LINE_AA)
     # --- (change2 end) ---
     new_frame = cv2.resize(frame, (v_width, v_height))
     frames.append(new_frame)
