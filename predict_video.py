@@ -152,7 +152,7 @@ while True:
     bottom_left_inner_pt = get_intersection_pt(baseline_bottom,left_inner_line)
     bottom_middle_pt = get_intersection_pt(baseline_bottom,middle_line)
     bottom_right_inner_pt = get_intersection_pt(baseline_bottom,right_inner_line)
-    bottom_right_outer_pt = get_intersection_pt(baseline_bottom,left_court_line)
+    bottom_right_outer_pt = get_intersection_pt(baseline_bottom,right_court_line)
     bottom_serve_left_pt = get_intersection_pt(bottom_inner_line,left_inner_line)
     bottom_serve_middle_pt = get_intersection_pt(bottom_inner_line,middle_line)
     bottom_serve_right_pt = get_intersection_pt(bottom_inner_line,right_inner_line)
