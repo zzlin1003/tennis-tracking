@@ -16,6 +16,12 @@ from sktime.datatypes._panel._convert import from_2d_array_to_nested
 from court_detector import CourtDetector, line_intersection
 from Models.tracknet import trackNet
 from TrackPlayers.trackplayers import *
+# # (change3) add this line
+# from TrackRackets.trackrackets import *
+# (change4) import mediapipe and PoseEstimation
+import mediapipe as mp
+from PoseEstimation.pose_estimation import draw_circle_using_landmark
+
 from utils import get_video_properties, get_dtype
 from detection import *
 from pickle import load
@@ -39,8 +45,9 @@ bounce = args.bounce
 n_classes = 256
 # (change)
 save_weights_path = 'WeightsTracknet/model.h5'
+
 yolo_classes = 'Yolov3/yolov3.txt'
-# (change) yolo_weights = 'Yolov3/yolov3.weights'
+yolo_weights = 'Yolov3/yolov3.weights'
 yolo_config = 'Yolov3/yolov3.cfg'
 
 if output_video_path == "":
@@ -83,10 +90,15 @@ for i in range(0, 8):
 fourcc = cv2.VideoWriter_fourcc(*'XVID')
 output_video = cv2.VideoWriter(output_video_path, fourcc, fps, (output_width, output_height))
 
-# load yolov3 labels
-LABELS = open(yolo_classes).read().strip().split("\n")
-# yolo net
-# net = cv2.dnn.readNet(yolo_weights, yolo_config) # (change) comment out this line
+# # load yolov3 labels
+# # (change3)
+# yolo_net, classes, _, output_layers = load_yolo(yolo_weights,
+#                                                 yolo_config,
+#                                                 yolo_classes)
+# LABELS = open(yolo_classes).read().strip().split("\n")
+# # yolo net
+# net = cv2.dnn.readNet(yolo_weights, yolo_config) 
+
 
 # court
 court_detector = CourtDetector()
@@ -176,8 +188,16 @@ while True:
 
     for key, val in ref_pts.items():
       cv2.circle(frame,val,2,(0,255,0),5)
-      cv2.putText(frame,f"{key}",val,cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,0,0),2,cv2.LINE_AA)
+      cv2.putText(frame,f"{key}",val,cv2.FONT_HERSHEY_SIMPLEX,1,(255,0,0),2,cv2.LINE_AA)
     # --- (change2 end) ---
+    # # --- (change3) draw rectangles around the racket of player 1
+    # frame = cv2.resize(frame,None,fx=0.4,fy=0.4)
+    # height, width, channels = frame.shape
+
+    # blobs, outputs = detect_objects(frame,yolo_net,output_layers)
+    # boxes, confs, class_ids = get_box_dimensions(outputs, height, width)
+    # frame = draw_one_label(boxes, confs,(255,0,0),class_ids, classes, frame, obj_name="tennis racket")
+    # # --- (change3 end)
     new_frame = cv2.resize(frame, (v_width, v_height))
     frames.append(new_frame)
   else:
@@ -190,6 +210,12 @@ detection_model.find_player_2_box()
 # second part 
 player1_boxes = detection_model.player_1_boxes
 player2_boxes = detection_model.player_2_boxes
+
+# (change4) add pose estimation object
+mpPose = mp.solutions.pose
+pose = mpPose.Pose()
+mpDraw = mp.solutions.drawing_utils
+dominant_hand = "right"
 
 video = cv2.VideoCapture(input_video_path)
 frame_i = 0
@@ -232,10 +258,27 @@ for img in frames:
     circles = cv2.HoughCircles(heatmap, cv2.HOUGH_GRADIENT, dp=1, minDist=1, param1=50, param2=2, minRadius=2,
                               maxRadius=7)
 
-
-    output_img = mark_player_box(output_img, player1_boxes, currentFrame-1)
-    output_img = mark_player_box(output_img, player2_boxes, currentFrame-1)
+    # (change4) fix the BUG: currentFrame-1 -> currentFrame
+    output_img = mark_player_box(output_img, player1_boxes, currentFrame)
+    output_img = mark_player_box(output_img, player2_boxes, currentFrame)
+    # --- (change4) draw pose estimation landmark on the frame
+    # the reason for cropping the image is to estimate pose on specific player
+    # TODO: analyze opponents
+    player_1_box = player1_boxes[currentFrame]
+    img_player_1_crop = output_img[int(player_1_box[1]):int(player_1_box[3]),
+                                   int(player_1_box[0]):int(player_1_box[2])]
     
+    imgRGB = cv2.cvtColor(img_player_1_crop, cv2.COLOR_BGR2RGB)
+    results = pose.process(imgRGB)
+    if results.pose_landmarks is not None:
+      if dominant_hand == "right":
+        draw_circle_using_landmark(img_player_1_crop,
+                                  results.pose_landmarks.landmark,
+                                  pose_id=16, # right wrist
+                                  ) 
+      else: # TODO: consider lefty
+        pass
+    # --- (end change4)
     PIL_image = cv2.cvtColor(output_img, cv2.COLOR_BGR2RGB)
     PIL_image = Image.fromarray(PIL_image)
 
