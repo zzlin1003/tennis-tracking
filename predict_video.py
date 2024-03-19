@@ -110,10 +110,8 @@ detection_model = DetectionModel(dtype=dtype)
 # get videos properties
 fps, length, v_width, v_height = get_video_properties(video)
 
-coords = []
 frame_i = 0
 frames = []
-t = []
 
 while True:
   ret, frame = video.read()
@@ -219,6 +217,18 @@ dominant_hand = "right"
 
 video = cv2.VideoCapture(input_video_path)
 frame_i = 0
+coords = []
+t = []
+
+# --- (change5) define kalman filter ---
+dt = 1
+sigma = 1
+state_dim = 4
+kf = cv2.KalmanFilter(state_dim,2)
+kf.measurementMatrix = np.array([[1,0,0,0],[0,1,0,0]],np.float32)
+kf.transitionMatrix = np.array([[1,0,dt,0],[0,1,0,dt],[0,0,1,0],[0,0,0,1]],np.float32)
+kf.processNoiseCov = np.eye(state_dim,dtype=np.float32) * sigma
+# --- change5 ends ---
 
 last = time.time() # start counting 
 # while (True):
