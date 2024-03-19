@@ -474,17 +474,17 @@ def interpolation(coords):
 
   return newCoords
 
-# a helper function for kalman filter to compute distance btw KF predicted 
-# pt and trackNet detected pt
-def kf_helper_dist(kf_pred_pt: np.array, trackNet_pt: tuple) -> float:
-  kf_x = int(kf_pred_pt[0,0])
-  kf_y = int(kf_pred_pt[1,0])
-  trackNet_x = trackNet_pt[0]
-  trackNet_y = trackNet_pt[0]
+# # a helper function for kalman filter to compute distance btw KF predicted 
+# # pt and trackNet detected pt
+# def kf_helper_dist(kf_pred_pt: np.array, trackNet_pt: tuple) -> float:
+#   kf_x = int(kf_pred_pt[0,0])
+#   kf_y = int(kf_pred_pt[1,0])
+#   trackNet_x = trackNet_pt[0]
+#   trackNet_y = trackNet_pt[0]
 
-  dist = np.sqrt((kf_x - trackNet_x)**2 + (kf_y - trackNet_y)**2)
+#   dist = np.sqrt((kf_x - trackNet_x)**2 + (kf_y - trackNet_y)**2)
 
-  return dist
+#   return dist
 
 def diff_xy(coords):
   coords = coords.copy()

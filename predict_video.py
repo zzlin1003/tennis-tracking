@@ -220,16 +220,16 @@ frame_i = 0
 coords = []
 t = []
 
-# --- (change5) define kalman filter ---
-dt = 1
-sigma = 1
-state_dim = 4
-kf = cv2.KalmanFilter(state_dim,2)
-kf.measurementMatrix = np.array([[1,0,0,0],[0,1,0,0]],np.float32)
-kf.transitionMatrix = np.array([[1,0,dt,0],[0,1,0,dt],[0,0,1,0],[0,0,0,1]],np.float32)
-kf.processNoiseCov = np.eye(state_dim,dtype=np.float32) * sigma
-ball_coords_cur_pred = kf.predict() # define "ball_cords_cur_pred" by making inital prediction
-# --- change5 ends ---
+# # --- (change5) use previous position as the current prediction ---
+# dt = 1
+# sigma = 1
+# state_dim = 4
+# kf = cv2.KalmanFilter(state_dim,2)
+# kf.measurementMatrix = np.array([[1,0,0,0],[0,1,0,0]],np.float32)
+# kf.transitionMatrix = np.array([[1,0,dt,0],[0,1,0,dt],[0,0,1,0],[0,0,0,1]],np.float32)
+# kf.processNoiseCov = np.eye(state_dim,dtype=np.float32) * sigma
+ball_coords_cur_pred = [0,0]
+# # --- change5 ends ---
 
 last = time.time() # start counting 
 # while (True):
@@ -301,9 +301,9 @@ for img in frames:
 
             coords.append([x,y])
             t.append(time.time()-last)
-            # --- (change5) update Kalman filter ---
-            kf.correct(np.array([[x],[y]],dtype=np.float32))
-            ball_coords_cur_pred = kf.predict()
+            # --- (change5) ---
+            # kf.correct(np.array([[x],[y]],dtype=np.float32))
+            ball_coords_cur_pred = [x,y]
             cv2.circle(output_img,(x,y),2,(0,255,0),5)
             # --- change5 ends ---
 
@@ -313,21 +313,17 @@ for img in frames:
             q.pop()
 
         else:
-            # --- (change5) update KF when there are multiple detected balls ---
-            # idea: choose the closest detected ball with KF prediction
-            # to update KF
-            # TODO: set dist threshold to define closest ball; if no closest ball
-            # found, use the KF prediction as new coordinates
-            circles.sort(key = lambda x: kf_helper_dist(ball_cords_cur_pred,x[0]))
+            # --- (change5) 
+            # circles.sort(key = lambda x: kf_helper_dist(ball_cords_cur_pred,x[0]))
             
-            # instead of appending "None", we append the closest circle
-            x = int(circles[0][0][0])
-            y = int(circles[0][0][1])
+            # instead of appending "None", we append current prediction
+            x = ball_coords_cur_pred[0]
+            y = ball_coords_cur_pred[1]
             coords.append([x,y]) 
             q.appendleft([x,y])
             # don't forget to update KF
-            kf.correct(np.array([[x],[y]],dtype=np.float32))
-            ball_coords_cur_pred = kf.predict()
+            # kf.correct(np.array([[x],[y]],dtype=np.float32))
+            ball_coords_cur_pred = [x,y]
             cv2.circle(output_img,(x,y),2,(0,255,0),5)
             # --- change5 ends ---
             t.append(time.time()-last)
@@ -335,16 +331,16 @@ for img in frames:
             q.pop()
 
     else:
-        # --- (change5) push KF prediction to "coords" and "q"
-        x = int(ball_coords_cur_pred[0,0])
-        y = int(ball_coords_cur_pred[1,0])
+        # --- (change5) 
+        x = ball_coords_cur_pred[0]
+        y = ball_coords_cur_pred[1]
 
         coords.append([x,y])
         q.appendleft([x,y])
 
         # don't forget to update KF
-        kf.correct(np.array([[x],[y]],dtype=np.float32))
-        ball_coords_cur_pred = kf.predict()
+        # kf.correct(np.array([[x],[y]],dtype=np.float32))
+        # ball_coords_cur_pred = kf.predict()
         cv2.circle(output_img,(x,y),2,(0,255,0),5)
         # --- change5 ends ---
         t.append(time.time()-last)
