@@ -292,60 +292,22 @@ for img in frames:
     # --- (end change4)
 
     # check if there have any tennis be detected
-    if circles is not None:
-        # if only one tennis be detected
-        if len(circles) == 1:
-
-            x = int(circles[0][0][0])
-            y = int(circles[0][0][1])
-
-            coords.append([x,y])
-            t.append(time.time()-last)
-            # --- (change5) ---
-            # kf.correct(np.array([[x],[y]],dtype=np.float32))
-            ball_coords_cur_pred = [x,y]
-            cv2.circle(output_img,(x,y),2,(0,255,0),5)
-            # --- change5 ends ---
-
-            # push x,y to queue
-            q.appendleft([x, y])
-            # pop x,y from queue
-            q.pop()
-
-        else:
-            # --- (change5) 
-            # circles.sort(key = lambda x: kf_helper_dist(ball_cords_cur_pred,x[0]))
-            
-            # instead of appending "None", we append current prediction
-            x = ball_coords_cur_pred[0]
-            y = ball_coords_cur_pred[1]
-            coords.append([x,y]) 
-            q.appendleft([x,y])
-            # don't forget to update KF
-            # kf.correct(np.array([[x],[y]],dtype=np.float32))
-            ball_coords_cur_pred = [x,y]
-            cv2.circle(output_img,(x,y),2,(0,255,0),5)
-            # --- change5 ends ---
-            t.append(time.time()-last)
-            # pop x,y from queue
-            q.pop()
-
+    if circles is not None and len(circles) == 1:
+      x = int(circles[0][0][0])
+      y = int(circles[0][0][1])
     else:
-        # --- (change5) 
-        x = ball_coords_cur_pred[0]
-        y = ball_coords_cur_pred[1]
+      x = ball_coords_cur_pred[0]
+      y = ball_coords_cur_pred[1]
 
-        coords.append([x,y])
-        q.appendleft([x,y])
+    coords.append([x,y])
+    t.append(time.time()-last)
+    # push x,y to queue
+    q.appendleft([x, y])
+    # pop x,y from queue
+    q.pop()
 
-        # don't forget to update KF
-        # kf.correct(np.array([[x],[y]],dtype=np.float32))
-        # ball_coords_cur_pred = kf.predict()
-        cv2.circle(output_img,(x,y),2,(0,255,0),5)
-        # --- change5 ends ---
-        t.append(time.time()-last)
-        # pop x,y from queue
-        q.pop()
+    cv2.circle(output_img,(x,y),2,(0,0,255),5)
+    ball_coords_cur_pred = [x,y]
 
     PIL_image = cv2.cvtColor(output_img, cv2.COLOR_BGR2RGB)
     PIL_image = Image.fromarray(PIL_image)
@@ -357,7 +319,7 @@ for img in frames:
             draw_y = q[i][1]
             bbox = (draw_x - 2, draw_y - 2, draw_x + 2, draw_y + 2)
             draw = ImageDraw.Draw(PIL_image)
-            draw.ellipse(bbox, outline='green')
+            draw.ellipse(bbox, outline='yellow')
             del draw
 
     # Convert PIL image format back to opencv image format
