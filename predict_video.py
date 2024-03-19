@@ -183,10 +183,10 @@ while True:
                'bsl': bottom_serve_left_pt,
                'bsm': bottom_serve_middle_pt,
                'bsr': bottom_serve_right_pt}
-
-    for key, val in ref_pts.items():
-      cv2.circle(frame,val,2,(0,255,0),5)
-      cv2.putText(frame,f"{key}",val,cv2.FONT_HERSHEY_SIMPLEX,1,(255,0,0),2,cv2.LINE_AA)
+    # not drawing circles here; avoid distracting ball detection
+    # for key, val in ref_pts.items():
+    #   cv2.circle(frame,val,2,(0,255,0),5)
+    #   cv2.putText(frame,f"{key}",val,cv2.FONT_HERSHEY_SIMPLEX,1,(255,0,0),2,cv2.LINE_AA)
     # --- (change2 end) ---
     # # --- (change3) draw rectangles around the racket of player 1
     # frame = cv2.resize(frame,None,fx=0.4,fy=0.4)
@@ -228,6 +228,7 @@ kf = cv2.KalmanFilter(state_dim,2)
 kf.measurementMatrix = np.array([[1,0,0,0],[0,1,0,0]],np.float32)
 kf.transitionMatrix = np.array([[1,0,dt,0],[0,1,0,dt],[0,0,1,0],[0,0,0,1]],np.float32)
 kf.processNoiseCov = np.eye(state_dim,dtype=np.float32) * sigma
+ball_coords_cur_pred = kf.predict() # define "ball_cords_cur_pred" by making inital prediction
 # --- change5 ends ---
 
 last = time.time() # start counting 
@@ -289,8 +290,6 @@ for img in frames:
       else: # TODO: consider lefty
         pass
     # --- (end change4)
-    PIL_image = cv2.cvtColor(output_img, cv2.COLOR_BGR2RGB)
-    PIL_image = Image.fromarray(PIL_image)
 
     # check if there have any tennis be detected
     if circles is not None:
@@ -302,6 +301,11 @@ for img in frames:
 
             coords.append([x,y])
             t.append(time.time()-last)
+            # --- (change5) update Kalman filter ---
+            kf.correct(np.array([[x],[y]],dtype=np.float32))
+            ball_coords_cur_pred = kf.predict()
+            cv2.circle(output_img,(x,y),2,(0,255,0),5)
+            # --- change5 ends ---
 
             # push x,y to queue
             q.appendleft([x, y])
@@ -309,20 +313,46 @@ for img in frames:
             q.pop()
 
         else:
-            coords.append(None)
+            # --- (change5) update KF when there are multiple detected balls ---
+            # idea: choose the closest detected ball with KF prediction
+            # to update KF
+            # TODO: set dist threshold to define closest ball; if no closest ball
+            # found, use the KF prediction as new coordinates
+            circles.sort(key = lambda x: kf_helper_dist(ball_cords_cur_pred,x[0]))
+            
+            # instead of appending "None", we append the closest circle
+            x = int(circles[0][0][0])
+            y = int(circles[0][0][1])
+            coords.append([x,y]) 
+            q.appendleft([x,y])
+            # don't forget to update KF
+            kf.correct(np.array([[x],[y]],dtype=np.float32))
+            ball_coords_cur_pred = kf.predict()
+            cv2.circle(output_img,(x,y),2,(0,255,0),5)
+            # --- change5 ends ---
             t.append(time.time()-last)
-            # push None to queue
-            q.appendleft(None)
             # pop x,y from queue
             q.pop()
 
     else:
-        coords.append(None)
+        # --- (change5) push KF prediction to "coords" and "q"
+        x = int(ball_coords_cur_pred[0,0])
+        y = int(ball_coords_cur_pred[1,0])
+
+        coords.append([x,y])
+        q.appendleft([x,y])
+
+        # don't forget to update KF
+        kf.correct(np.array([[x],[y]],dtype=np.float32))
+        ball_coords_cur_pred = kf.predict()
+        cv2.circle(output_img,(x,y),2,(0,255,0),5)
+        # --- change5 ends ---
         t.append(time.time()-last)
-        # push None to queue
-        q.appendleft(None)
         # pop x,y from queue
         q.pop()
+
+    PIL_image = cv2.cvtColor(output_img, cv2.COLOR_BGR2RGB)
+    PIL_image = Image.fromarray(PIL_image)
 
     # draw current frame prediction and previous 7 frames as yellow circle, total: 8 frames
     for i in range(0, 8):
@@ -331,7 +361,7 @@ for img in frames:
             draw_y = q[i][1]
             bbox = (draw_x - 2, draw_y - 2, draw_x + 2, draw_y + 2)
             draw = ImageDraw.Draw(PIL_image)
-            draw.ellipse(bbox, outline='yellow')
+            draw.ellipse(bbox, outline='green')
             del draw
 
     # Convert PIL image format back to opencv image format
